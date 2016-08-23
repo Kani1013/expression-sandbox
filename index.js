@@ -1,6 +1,7 @@
 'use strict'
 var readonlyProxies = new WeakMap
 var currentSandbox = undefined
+var GLOBAL = new Function('return this')()
 
 function compileExpression(src) {
 	if (typeof src !== 'string') {
@@ -70,15 +71,9 @@ var traps = {
 		throw new TypeError('You cannot delete properties on a sandboxed object.')
 	},
 	apply: function (target, thisArg, argumentsList) {
-		if (target === Function || target === eval) {
-			throw TypeError('You cannot compile JS code from within a sandboxed environment.')
-		}
 		return getProxyOrPrimitive(Reflect.apply(target, thisArg, argumentsList))
 	},
 	construct: function (target, argumentsList, newTarget) {
-		if (target === Function) {
-			throw TypeError('You cannot compile JS code from within a sandboxed environment.')
-		}
 		return getProxyOrPrimitive(Reflect.construct(target, argumentsList, newTarget))
 	}
 }
@@ -92,6 +87,9 @@ function getProxyOrPrimitive(value) {
 }
 
 function getProxy(value) {
+	if (value === GLOBAL) {
+		throw new TypeError('The global object is forbidden from entering a sandboxed context.')
+	}
 	var proxy = readonlyProxies.get(value)
 	if (typeof proxy === 'undefined') {
 		proxy = new Proxy(value, traps)
