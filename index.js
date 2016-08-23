@@ -27,6 +27,9 @@ function compileExpression(src) {
 		} finally {
 			currentSandbox = undefined
 		}
+		if (isObject(result)) {
+			// it could be a proxy
+		}
 		return result
 	}
 }
@@ -34,58 +37,100 @@ module.exports = compileExpression
 
 var traps = {
 	get: function (target, key, receiver) {
-		if (key === Symbol.unscopables && target === currentSandbox) {
-			return undefined
+		if (currentSandbox) {
+			if (key === Symbol.unscopables && target === currentSandbox) {
+				return undefined
+			}
+			if (!notPrivate(key)) {
+				return undefined
+			}
+			return getProxyOrPrimitive(Reflect.get(target, key, receiver))
 		}
-		if (!notPrivate(key)) {
-			return undefined
-		}
-		return getProxyOrPrimitive(Reflect.get(target, key, receiver))
+		return Reflect.get(target, key, receiver)
 	},
-	set: function () {
-		throw new TypeError('You cannot set properties on a sandboxed object.')
+	set: function (target, key, value, receiver) {
+		if (currentSandbox) {
+			throw new TypeError('You cannot set properties on a sandboxed object.')
+		}
+		return Reflect.set(target, key, value, receiver)
 	},
 	has: function (target, key) {
-		if (target === currentSandbox) {
-			return true
+		if (currentSandbox) {
+			if (target === currentSandbox) {
+				return true
+			}
+			if (!notPrivate(key)) {
+				return false
+			}
+			return getProxyOrPrimitive(Reflect.has(target, key))
 		}
-		if (!notPrivate(key)) {
-			return false
-		}
-		return getProxyOrPrimitive(Reflect.has(target, key))
+		return Reflect.has(target, key)
 	},
 	getPrototypeOf: function (target) {
-		return getProxyOrPrimitive(Reflect.getPrototypeOf(target))
+		if (currentSandbox) {
+			return getProxyOrPrimitive(Reflect.getPrototypeOf(target))
+		}
+		return Reflect.getPrototypeOf(target)
 	},
-	setPrototypeOf: function () {
-		throw new TypeError('You cannot set the prototype of a sandboxed object.')
+	setPrototypeOf: function (target, proto) {
+		if (currentSandbox) {
+			throw new TypeError('You cannot set the prototype of a sandboxed object.')
+		}
+		return Reflect.setPrototypeOf(target, proto)
 	},
 	isExtensible: function (target) {
-		return getProxyOrPrimitive(Reflect.isExtensible(target))
+		if (currentSandbox) {
+			return getProxyOrPrimitive(Reflect.isExtensible(target))
+		}
+		return Reflect.isExtensible(target)
 	},
-	preventExtensions: function () {
-		throw new TypeError('You cannot change the extensibility of a sandboxed object.')
+	preventExtensions: function (target) {
+		if (currentSandbox) {
+			throw new TypeError('You cannot change the extensibility of a sandboxed object.')
+		}
+		return Reflect.preventExtensions(target)
 	},
 	getOwnPropertyDescriptor: function (target, key) {
-		if (!notPrivate(key)) {
-			return undefined
+		if (currentSandbox) {
+			if (key === Symbol.unscopables && target === currentSandbox) {
+				return undefined
+			}
+			if (!notPrivate(key)) {
+				return undefined
+			}
+			return getProxyOrPrimitive(Reflect.getOwnPropertyDescriptor(target, key))
 		}
-		return getProxyOrPrimitive(Reflect.getOwnPropertyDescriptor(target, key))
+		return Reflect.getOwnPropertyDescriptor(target, key)
 	},
-	defineProperty: function () {
-		throw new TypeError('You cannot define properties on a sandboxed object.')
+	defineProperty: function (target, key, descriptor) {
+		if (currentSandbox) {
+			throw new TypeError('You cannot define properties on a sandboxed object.')
+		}
+		return Reflect.defineProperty(target, key, descriptor)
 	},
-	deleteProperty: function () {
-		throw new TypeError('You cannot delete properties on a sandboxed object.')
+	deleteProperty: function (target, key) {
+		if (currentSandbox) {
+			throw new TypeError('You cannot delete properties on a sandboxed object.')
+		}
+		return Reflect.deleteProperty(target, key)
 	},
 	ownKeys: function (target) {
-		return getProxyOrPrimitive(Reflect.ownKeys(target).filter(notPrivate))
+		if (currentSandbox) {
+			return getProxyOrPrimitive(Reflect.ownKeys(target).filter(notPrivate))
+		}
+		return Reflect.ownKeys(target)
 	},
 	apply: function (target, thisArg, argumentsList) {
-		return getProxyOrPrimitive(Reflect.apply(target, thisArg, argumentsList))
+		if (currentSandbox) {
+			return getProxyOrPrimitive(Reflect.apply(target, thisArg, argumentsList))
+		}
+		return Reflect.apply(target, thisArg, argumentsList)
 	},
 	construct: function (target, argumentsList, newTarget) {
-		return getProxyOrPrimitive(Reflect.construct(target, argumentsList, newTarget))
+		if (currentSandbox) {
+			return getProxyOrPrimitive(Reflect.construct(target, argumentsList, newTarget))
+		}
+		return Reflect.construct(target, argumentsList, newTarget)
 	}
 }
 
@@ -112,3 +157,50 @@ function getProxy(value) {
 function notPrivate(key) {
 	return typeof key !== 'string' || key[0] !== '_'
 }
+
+function replaceWithProxy(key, proxies) {
+	var d = Object.getOwnPropertyDescriptor(this, key)
+	if (!('value' in d)) {
+		if (!d.configurable) {
+			// This getter/setter could potentially return a non-proxied object
+			return
+		}
+		var getter = getProxyOrPrimitive(d.get)
+		var setter = getProxyOrPrimitive(d.set)
+		Object.defineProperty(this, key, {
+			get: getter,
+			set: setter,
+			enumerable: d.enumerable,
+			configurable: false
+		})
+		proxies.push(getter)
+		proxies.push(setter)
+		return
+	}
+	
+	var value = this[key]
+	if (proxies.indexOf(value) >= 0) {
+		return
+	}
+	
+	if (d.writable) {
+		proxies.push(this[key] = getProxyOrPrimitive(value))
+		return
+	}
+	if (d.configurable) {
+		var proxy = getProxyOrPrimitive(value)
+		Object.defineProperty(this, key, {
+			value: proxy,
+			writable: false,
+			enumerable: d.enumerable,
+			configurable: false
+		})
+		proxies.push(proxy)
+		return
+	}
+	// This value is not secure if it is an object or function
+}
+
+// Freeze and proxy anything that is accessible through JavaScript syntax alone
+require('./lib/make-safe')(replaceWithProxy)
+
