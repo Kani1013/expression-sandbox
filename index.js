@@ -9,7 +9,6 @@ function compileExpression(src) {
 	}
 	
 	// Can things like this break it?
-	// '}).call(this), (function (){return this'
 	// compile('}).call(this), (function (){return 2..constructor.constructor("return this")()')({})
 	
 	// "use strict" does not improve security, it is only added for convenience
@@ -38,6 +37,9 @@ var traps = {
 		if (key === Symbol.unscopables && target === currentSandbox) {
 			return undefined
 		}
+		if (!notPrivate(key)) {
+			return undefined
+		}
 		return getProxyOrPrimitive(Reflect.get(target, key, receiver))
 	},
 	set: function () {
@@ -46,6 +48,9 @@ var traps = {
 	has: function (target, key) {
 		if (target === currentSandbox) {
 			return true
+		}
+		if (!notPrivate(key)) {
+			return false
 		}
 		return getProxyOrPrimitive(Reflect.has(target, key))
 	},
@@ -62,6 +67,9 @@ var traps = {
 		throw new TypeError('You cannot change the extensibility of a sandboxed object.')
 	},
 	getOwnPropertyDescriptor: function (target, key) {
+		if (!notPrivate(key)) {
+			return undefined
+		}
 		return getProxyOrPrimitive(Reflect.getOwnPropertyDescriptor(target, key))
 	},
 	defineProperty: function () {
@@ -69,6 +77,9 @@ var traps = {
 	},
 	deleteProperty: function () {
 		throw new TypeError('You cannot delete properties on a sandboxed object.')
+	},
+	ownKeys: function (target) {
+		return getProxyOrPrimitive(Reflect.ownKeys(target).filter(notPrivate))
 	},
 	apply: function (target, thisArg, argumentsList) {
 		return getProxyOrPrimitive(Reflect.apply(target, thisArg, argumentsList))
@@ -96,4 +107,8 @@ function getProxy(value) {
 		readonlyProxies.set(value, proxy)
 	}
 	return proxy
+}
+
+function notPrivate(key) {
+	return typeof key !== 'string' || key[0] !== '_'
 }
