@@ -1,5 +1,6 @@
 'use strict'
 var readonlyProxies = new WeakMap
+var proxySources = new WeakMap
 var currentSandbox = undefined
 var GLOBAL = new Function('return this')()
 
@@ -7,9 +8,6 @@ function compileExpression(src) {
 	if (typeof src !== 'string') {
 		throw new TypeError('Expected argument to be a string.')
 	}
-	
-	// Can things like this break it?
-	// compile('}).call(this), (function (){return 2..constructor.constructor("return this")()')({})
 	
 	// "use strict" does not improve security, it is only added for convenience
 	var code = new Function('sandbox', 'with (sandbox) {return (function () {"use strict"; return ' + src + '}).call(this)}')
@@ -27,10 +25,7 @@ function compileExpression(src) {
 		} finally {
 			currentSandbox = undefined
 		}
-		if (isObject(result)) {
-			// it could be a proxy
-		}
-		return result
+		return isObject(result) && proxySources.get(result) || result
 	}
 }
 module.exports = compileExpression
@@ -139,17 +134,21 @@ function isObject(value) {
 }
 
 function getProxyOrPrimitive(value) {
-	return isObject(value) ? getProxy(value) : value
+	if (isObject(value)) {
+		return safeObjects.indexOf(value) >= 0 ? value : getProxy(value)
+	}
+	return value
 }
 
-function getProxy(value) {
+function getProxy(value, hideOriginal) {
 	if (value === GLOBAL) {
 		throw new TypeError('The global object is forbidden from entering a sandboxed context.')
 	}
 	var proxy = readonlyProxies.get(value)
 	if (typeof proxy === 'undefined') {
 		proxy = new Proxy(value, traps)
-		readonlyProxies.set(value, proxy)
+		readonlyProxies.set(hideOriginal ? proxy : value, proxy)
+		proxySources.set(proxy, hideOriginal ? proxy : value)
 	}
 	return proxy
 }
@@ -158,49 +157,29 @@ function notPrivate(key) {
 	return typeof key !== 'string' || key[0] !== '_'
 }
 
-function replaceWithProxy(key, proxies) {
-	var d = Object.getOwnPropertyDescriptor(this, key)
-	if (!('value' in d)) {
-		if (!d.configurable) {
-			// This getter/setter could potentially return a non-proxied object
-			return
-		}
-		var getter = getProxyOrPrimitive(d.get)
-		var setter = getProxyOrPrimitive(d.set)
-		Object.defineProperty(this, key, {
-			get: getter,
-			set: setter,
-			enumerable: d.enumerable,
-			configurable: false
-		})
-		proxies.push(getter)
-		proxies.push(setter)
-		return
-	}
-	
-	var value = this[key]
-	if (proxies.indexOf(value) >= 0) {
-		return
-	}
-	
-	if (d.writable) {
-		proxies.push(this[key] = getProxyOrPrimitive(value))
-		return
-	}
-	if (d.configurable) {
-		var proxy = getProxyOrPrimitive(value)
-		Object.defineProperty(this, key, {
-			value: proxy,
-			writable: false,
-			enumerable: d.enumerable,
-			configurable: false
-		})
-		proxies.push(proxy)
-		return
-	}
-	// This value is not secure if it is an object or function
-}
-
 // Freeze and proxy anything that is accessible through JavaScript syntax alone
-require('./lib/make-safe')(replaceWithProxy)
+// This should include any value that you can get from JavaScript syntax itself.
+// For example:
+//     "my string".foobar
+//     try {throw 1} catch (err) {err.foobar}
+// Symbols are included here because they are not protected by our proxying
+// because they are primitives.
+var safeObjects = require('./lib/make-safe')([
+	Boolean.prototype,
+	Number.prototype,
+	String.prototype,
+	Symbol.prototype,
+	Function.prototype,
+	Object.prototype,
+	Array.prototype,
+	RegExp.prototype,
+	Error.prototype,
+	EvalError.prototype,
+	RangeError.prototype,
+	ReferenceError.prototype,
+	SyntaxError.prototype,
+	TypeError.prototype,
+	URIError.prototype,
+	Promise.prototype
+], isObject, getProxy)
 
