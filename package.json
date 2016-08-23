@@ -1,0 +1,28 @@
+{
+  "name": "expression-sandbox",
+  "version": "0.5.0",
+  "description": "A small tool for evaluating JavaScript code in a secure sandbox, for Node.js or the modern browser.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoshuaWise/expression-sandbox.git"
+  },
+  "keywords": [
+    "secure",
+    "sandbox",
+    "expression",
+    "execution",
+    "compile",
+    "code",
+    "eval"
+  ],
+  "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JoshuaWise/expression-sandbox/issues"
+  },
+  "homepage": "https://github.com/JoshuaWise/expression-sandbox#readme"
+}
