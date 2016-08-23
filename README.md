@@ -46,3 +46,8 @@ If you think there are vulnerabilities in the sandbox that I didn't think of, pl
 ## Caveats
 
 This package replaces some built-in objects with [Proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). In rare cases, this can cause odd behvaior with with `===` operator, if you cache one of these objects before this package is loaded. For this reason, it is recommended that this package is loaded before any other JavaScript code runs.
+
+## Why the fork?
+
+The opinions behind [nx-compile](https://github.com/RisingStack/nx-compile) differ from the opinions behind [expression-sandbox](https://github.com/JoshuaWise/expression-sandbox). For example, `expression-sandbox` is not interested in providing a non-secure version of itself. The "small modules" rule suggests that such functionality should be in its own module. Additionally, `expression-sandbox` aims to secure *anything* you put into the sandbox—not just globals and native prototypes.
+
