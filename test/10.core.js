@@ -64,8 +64,18 @@ describe('Expression Compiler', function () {
 			expect(function () {compiler('function () {}')({})}).to.throw(TypeError)
 		})
 		it('should recognize correct object identities', function () {
+			var obj = {}
+			obj.foo = {bar: obj}
 			expect(compiler('2..constructor === Number')({Number})).to.be.true
 			expect(compiler('2..constructor.constructor === Function')({Function})).to.be.true
+			expect(compiler('this().constructor === this')(Symbol)).to.be.true
+			expect(compiler('this === foo.bar')(obj)).to.be.true
+		})
+		it('should be agnostic to which context object is given', function () {
+			var code = compiler('a + b')
+			expect(code({a: 2, b: 50})).to.equal(52)
+			expect(code({a: 'foo', b: 'bar'})).to.equal('foobar')
+			expect(code({})).to.deep.equal(NaN)
 		})
 	})
 })
