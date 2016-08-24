@@ -66,6 +66,7 @@ describe('Expression Compiler', function () {
 		it('should recognize correct object identities', function () {
 			var obj = {}
 			obj.foo = {bar: obj}
+			expect(2..constructor === Number).to.be.true
 			expect(compiler('2..constructor === Number')({Number})).to.be.true
 			expect(compiler('2..constructor.constructor === Function')({Function})).to.be.true
 			expect(compiler('this().constructor === this')(Symbol)).to.be.true
