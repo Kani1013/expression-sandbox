@@ -28,16 +28,13 @@ From inside the sandbox...
 	* This is specifically forbidden. You're not allowed to access it even if it's passed into a sandbox explicitly
 * You can't access properties that start with `_` on objects that are passed into the sandbox.
 * You can't access any scope anywhere except for what is specifically passed into the sandbox. Anything passed into the sandbox can be accessed, but not modified.
+* You can only return primitive values.
+	* You can't return objects
+	* You can't return functions
 
 ## What kinds of things are NOT protected against?
 
-* Any sensitive information that is passed into the sandbox (unless that information is behind a property that starts with `_`)
-* Any functions that are created inside the sandbox, but are returned, and then executed outside of the sandbox
-
-It is recommended to cast the result of a sandboxed execution to a primitive type, to prevent accidentally invoking an insecure function:
-```js
-var result = String(code(myContext))
-```
+Any sensitive information that is passed into the sandbox can be accessed by the unsecure code (unless that information is behind a property that starts with `_`)
 
 ## Am I wrong?
 
@@ -49,5 +46,5 @@ This package replaces some built-in objects with [Proxies](https://developer.moz
 
 ## Why the fork?
 
-The opinions behind [nx-compile](https://github.com/RisingStack/nx-compile) differ from the opinions behind [expression-sandbox](https://github.com/JoshuaWise/expression-sandbox). For example, `expression-sandbox` is not interested in providing a non-secure version of itself. The "small modules" rule suggests that such functionality should be in its own module. Additionally, `expression-sandbox` aims to secure *anything* you put into the sandbox—not just globals and native prototypes.
+The opinions behind [nx-compile](https://github.com/RisingStack/nx-compile) differ from the opinions behind [expression-sandbox](https://github.com/JoshuaWise/expression-sandbox). For example, `expression-sandbox` is not interested in providing a non-secure version of itself. The "small modules" rule suggests that such functionality should be in its own module. Additionally, `expression-sandbox` aims to secure *anything* you put into the sandbox—not just globals and native prototypes. Finally, `expression-sandbox` keeps its independence from [nx-framework](https://github.com/RisingStack/nx-framework), to be as generic as possible.
 

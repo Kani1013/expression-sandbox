@@ -1,8 +1,8 @@
 'use strict'
 var readonlyProxies = new WeakMap
-var proxySources = new WeakMap
 var currentSandbox = undefined
 var GLOBAL = new Function('return this')()
+var unscopablesSymbol = Symbol.unscopables
 
 function compileExpression(src) {
 	if (typeof src !== 'string') {
@@ -16,6 +16,9 @@ function compileExpression(src) {
 		if (!isObject(sandbox)) {
 			throw new TypeError('Expected argument to be an object or function.')
 		}
+		if (currentSandbox) {
+			throw new Error('You cannot run sandboxed code inside an already-running sandbox.')
+		}
 		var sandboxProxy = getProxy(sandbox)
 		var result
 		
@@ -25,7 +28,10 @@ function compileExpression(src) {
 		} finally {
 			currentSandbox = undefined
 		}
-		return isObject(result) && proxySources.get(result) || result
+		if (isObject(result)) {
+			throw TypeError('Sandboxes are only allowed to return primitive values.')
+		}
+		return result
 	}
 }
 module.exports = compileExpression
@@ -33,7 +39,7 @@ module.exports = compileExpression
 var traps = {
 	get: function (target, key, receiver) {
 		if (currentSandbox) {
-			if (key === Symbol.unscopables && target === currentSandbox) {
+			if (key === unscopablesSymbol && target === currentSandbox) {
 				return undefined
 			}
 			if (!notPrivate(key)) {
@@ -140,15 +146,14 @@ function getProxyOrPrimitive(value) {
 	return value
 }
 
-function getProxy(value, hideOriginal) {
-	if (value === GLOBAL) {
+function getProxy(object, hideOriginal) {
+	if (object === GLOBAL) {
 		throw new TypeError('The global object is forbidden from entering a sandboxed context.')
 	}
-	var proxy = readonlyProxies.get(value)
+	var proxy = readonlyProxies.get(object)
 	if (typeof proxy === 'undefined') {
-		proxy = new Proxy(value, traps)
-		readonlyProxies.set(hideOriginal ? proxy : value, proxy)
-		proxySources.set(proxy, hideOriginal ? proxy : value)
+		proxy = new Proxy(object, traps)
+		readonlyProxies.set(hideOriginal ? proxy : object, proxy)
 	}
 	return proxy
 }
@@ -181,5 +186,5 @@ var safeObjects = require('./lib/make-safe')([
 	TypeError.prototype,
 	URIError.prototype,
 	Promise.prototype
-], isObject, getProxy)
+], isObject, getProxy, GLOBAL)
 
