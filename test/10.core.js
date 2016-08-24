@@ -78,5 +78,8 @@ describe('Expression Compiler', function () {
 			expect(code({a: 'foo', b: 'bar'})).to.equal('foobar')
 			expect(code({})).to.deep.equal(NaN)
 		})
+		it('should be able to return the results of self-executing functions', function () {
+			expect(compiler('function () {return foo + 2}()')({foo: 7})).to.equal(9)
+		})
 	})
 })
