@@ -26,6 +26,7 @@ From inside the sandbox...
 	* you can't modify the sandbox context object itself
 * You can't access the global object.
 	* This is specifically forbidden. You're not allowed to access it even if it's passed into a sandbox explicitly
+* You can't compile code with `Function` or `eval`.
 * You can't access properties that start with `_` on objects that are passed into the sandbox.
 * You can't access any scope anywhere except for what is specifically passed into the sandbox. Anything passed into the sandbox can be accessed, but not modified.
 * You can only return primitive values.

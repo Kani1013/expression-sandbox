@@ -3,6 +3,7 @@ var readonlyProxies = new WeakMap
 var currentSandbox = undefined
 var GLOBAL = new Function('return this')()
 var unscopablesSymbol = Symbol.unscopables
+var FunctionConstructor = 0..constructor.constructor
 
 function compileExpression(src) {
 	if (typeof src !== 'string') {
@@ -123,12 +124,18 @@ var traps = {
 	},
 	apply: function (target, thisArg, argumentsList) {
 		if (currentSandbox) {
+			if (target === FunctionConstructor || target === FunctionConstructorProxy) {
+				throw new TypeError('You cannot use the Function constructor in a sandboxed context.')
+			}
 			return getProxyOrPrimitive(Reflect.apply(target, thisArg, argumentsList))
 		}
 		return Reflect.apply(target, thisArg, argumentsList)
 	},
 	construct: function (target, argumentsList, newTarget) {
 		if (currentSandbox) {
+			if (target === FunctionConstructor || target === FunctionConstructorProxy) {
+				throw new TypeError('You cannot use the Function constructor in a sandboxed context.')
+			}
 			return getProxyOrPrimitive(Reflect.construct(target, argumentsList, newTarget))
 		}
 		return Reflect.construct(target, argumentsList, newTarget)
@@ -149,6 +156,9 @@ function getProxyOrPrimitive(value) {
 function getProxy(object, hideOriginal) {
 	if (object === GLOBAL) {
 		throw new TypeError('The global object is forbidden from entering a sandboxed context.')
+	}
+	if (object === evalFunction) {
+		throw new TypeError('The eval function is forbidden from entering a sandboxed context.')
 	}
 	var proxy = readonlyProxies.get(object)
 	if (typeof proxy === 'undefined') {
@@ -187,4 +197,7 @@ var safeObjects = require('./lib/make-safe')([
 	URIError.prototype,
 	Promise.prototype
 ], isObject, getProxy, GLOBAL)
+
+var evalFunction = GLOBAL.eval
+var FunctionConstructorProxy = 0..constructor.constructor
 
