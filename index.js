@@ -21,13 +21,20 @@ function compileExpression(src) {
 			throw new Error('You cannot run sandboxed code inside an already-running sandbox.')
 		}
 		var sandboxProxy = getProxy(sandbox)
-		var result
+		var result, error
 		
 		currentSandbox = sandbox
 		try {
 			result = code.call(sandboxProxy, sandboxProxy)
-		} finally {
 			currentSandbox = undefined
+		} catch (ex) {
+			currentSandbox = undefined
+			if (ex instanceof Error) {
+				error = new ex.constructor('' + ex.message)
+				error.stack = '' + ex.stack
+				throw error
+			}
+			throw new Error(String(ex))
 		}
 		if (isObject(result)) {
 			throw TypeError('Sandboxes are only allowed to return primitive values.')
