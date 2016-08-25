@@ -211,10 +211,7 @@ var evalFunction = GLOBAL.eval
 var FunctionConstructorProxy = 0..constructor.constructor
 
 module.exports.equals = function (a, b) {
-	if (a === b || (a !== a && b !== b)) {
-		return true
-	}
-	return (readonlyProxies.get(a) || a) === (readonlyProxies.get(b) || b)
+	return a === b || (readonlyProxies.get(a) || a) === (readonlyProxies.get(b) || b)
 }
 
 
