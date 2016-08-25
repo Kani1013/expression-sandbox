@@ -1,8 +1,6 @@
 'use strict'
-var makeSandbox = require('./lib/make-sandbox')
 var readonlyProxies = new WeakMap
 var currentSandbox = undefined
-var allowFreeArg = 2
 var GLOBAL = new Function('return this')()
 var unscopablesSymbol = Symbol.unscopables
 var FunctionConstructor = 0..constructor.constructor
@@ -12,9 +10,8 @@ function compileExpression(src) {
 		throw new TypeError('Expected argument to be a string.')
 	}
 	
-	src = 'undefined, ' + src
-	FunctionConstructor(src) // Tests for syntax errors without running the code
-	var code = makeSandbox(src)
+	new FunctionConstructor('return ' + src) // Tests for syntax errors without running the code
+	var code = new FunctionConstructor('sandbox', 'with (sandbox) {return (function () {"use strict"; return ' + src + '}).call(this)}')
 	
 	return function (sandbox) {
 		if (!isObject(sandbox)) {
@@ -27,12 +24,10 @@ function compileExpression(src) {
 		var result
 		
 		currentSandbox = sandbox
-		allowFreeArg = 2
 		try {
 			result = code.call(sandboxProxy, sandboxProxy)
 		} finally {
 			currentSandbox = undefined
-			allowFreeArg = 0
 		}
 		if (isObject(result)) {
 			throw TypeError('Sandboxes are only allowed to return primitive values.')
@@ -64,7 +59,7 @@ var traps = {
 	has: function (target, key) {
 		if (currentSandbox) {
 			if (target === currentSandbox) {
-				return allowFreeArg > 0 ? (--allowFreeArg, false) : true
+				return true
 			}
 			if (!notPrivate(key)) {
 				return false
@@ -205,3 +200,4 @@ var safeObjects = require('./lib/make-safe')([
 
 var evalFunction = GLOBAL.eval
 var FunctionConstructorProxy = 0..constructor.constructor
+

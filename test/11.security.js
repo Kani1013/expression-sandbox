@@ -11,15 +11,28 @@ describe('An attacker', function () {
 		expect(function () {compiler('foo()')({foo: function () {return global}})}).to.throw(TypeError)
 	})
 	it('cannot use functions to reveal the global object', function () {
-		expect(function () {compiler('function () {return this.foo}()')({})}).to.throw(TypeError)
+		expect(function () {
+			compiler('function () {return this.foo}()')({})
+		}).to.throw(TypeError)
+		expect(function () {
+			compiler('}).call(this), function () {return this.foo}(); (function () {')({})
+		}).to.throw(SyntaxError)
 	})
 	it('cannot use eval to reveal the global object', function () {
 		expect(function () {
 			compiler('2..constructor.constructor("return this.foo")()')({})
 		}).to.throw(TypeError)
 		expect(function () {
+			compiler('(function () {}).constructor("return this.foo")()')({})
+		}).to.throw(TypeError)
+		expect(function () {
 			compiler('eval("this.foo")')({eval})
 		}).to.throw(TypeError)
+	})
+	it('cannot use string manipulation to execute unsandboxed code', function () {
+		expect(function () {
+			compiler('}).call(this)} 123; if (false) {(function () {')({})
+		}).to.throw(SyntaxError)
 	})
 	it('cannot manipulate the sandbox context object')
 	it('cannot manipulate objects that are passed into the sandbox')
