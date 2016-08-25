@@ -45,6 +45,29 @@ If you think there are vulnerabilities in the sandbox that I didn't think of, pl
 
 This package replaces some built-in objects with [Proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy). In rare cases, this can cause odd behvaior with with `===` operator, if you cache one of these objects before this package is loaded. For this reason, it is recommended that this package is loaded before any other JavaScript code runs.
 
+There's one more caveat.
+
+If you pass an object into a sandbox, and then you pass that object into a function that was created *outside* the sandbox, the function will receive a proxy of the original object. To test if that proxy represents a specific non-proxy object, you can use `compiler.equals()`, as shown below.
+
+```js
+var compiler = require('expression-sandbox');
+var obj = {};
+
+function badTest(a) {
+	return a === obj;
+}
+
+function goodTest(a) {
+	return compiler.equals(a, obj);
+}
+
+var context = {obj, badTest, goodTest};
+compiler('badTest(obj)')(context); // Returns false
+compiler('goodTest(obj)')(context); // Returns true
+```
+
+But don't worry, 99% of the time this issue will never come up.
+
 ## Why the fork?
 
 The opinions behind [nx-compile](https://github.com/RisingStack/nx-compile) differ from the opinions behind [expression-sandbox](https://github.com/JoshuaWise/expression-sandbox). For example, `expression-sandbox` is not interested in providing a non-secure version of itself. The "small modules" rule suggests that such functionality should be in its own module. Additionally, `expression-sandbox` aims to secure *anything* you put into the sandbox—not just globals and native prototypes. Finally, `expression-sandbox` keeps its independence from [nx-framework](https://github.com/RisingStack/nx-framework), to be as generic as possible.
