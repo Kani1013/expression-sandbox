@@ -1,4 +1,4 @@
-# expression-sandbox
+# expression-sandbox [![Build Status](https://travis-ci.org/JoshuaWise/expression-sandbox.svg?branch=master)](https://travis-ci.org/JoshuaWise/expression-sandbox)
 This lets you compile and run someone else's arbitrary JavaScript safely within your own JavaScript program.
 
 ## Installation
