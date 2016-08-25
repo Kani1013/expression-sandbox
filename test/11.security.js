@@ -11,7 +11,7 @@ describe('An attacker', function () {
 		expect(function () {compiler('foo()')({foo: function () {return global}})}).to.throw(TypeError)
 	})
 	it('cannot use functions to reveal the global object', function () {
-		expect(compiler('}).call(this), function () {return this.foo}(); (function () {')({})).to.not.equal(123)
+		expect(function () {compiler('function () {return this.foo}()')({})}).to.throw(TypeError)
 	})
 	it('cannot use eval to reveal the global object', function () {
 		expect(function () {
@@ -20,9 +20,6 @@ describe('An attacker', function () {
 		expect(function () {
 			compiler('eval("this.foo")')({eval})
 		}).to.throw(TypeError)
-	})
-	it('cannot use string manipulation to execute unsandboxed code', function () {
-		expect(compiler('}).call(this)} 123; if (false) {(function () {')({})).to.equal(undefined)
 	})
 	it('cannot manipulate the sandbox context object')
 	it('cannot manipulate objects that are passed into the sandbox')
