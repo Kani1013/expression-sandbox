@@ -1,6 +1,6 @@
 {
   "name": "expression-sandbox",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A small tool for evaluating JavaScript code in a secure sandbox, for Node.js or the modern browser.",
   "main": "index.js",
   "scripts": {
