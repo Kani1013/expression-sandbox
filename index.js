@@ -195,7 +195,9 @@ var safeObjects = require('./lib/make-safe')([
 	SyntaxError.prototype,
 	TypeError.prototype,
 	URIError.prototype,
-	Promise.prototype
+	Promise.prototype,
+	Object.getPrototypeOf(function*(){}),
+	Object.getPrototypeOf(function*(){}())
 ], isObject, getProxy, GLOBAL)
 
 var evalFunction = GLOBAL.eval
