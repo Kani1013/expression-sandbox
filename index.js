@@ -10,7 +10,7 @@ function compileExpression(src) {
 		throw new TypeError('Expected argument to be a string.')
 	}
 	
-	new FunctionConstructor('return ' + src) // Tests for syntax errors without running the code
+	new FunctionConstructor('"use strict"; return ' + src) // Tests for syntax errors without running the code
 	var code = new FunctionConstructor('sandbox', 'with (sandbox) {return (function () {"use strict"; return ' + src + '}).call(this)}')
 	
 	return function (sandbox) {
