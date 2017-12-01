@@ -32,7 +32,7 @@ describe('An attacker', function () {
 	it('cannot use eval to reveal the document object', function () {
 		expect(function () {
 			compiler('return [].slice.constructor(\"return document.toString()\")();')({})
-		}).to.be("[object HTMLDocument]")
+		}).toEqual("[object HTMLDocument]")
 	})
 	it('cannot use string manipulation to execute unsandboxed code', function () {
 		expect(function () {
