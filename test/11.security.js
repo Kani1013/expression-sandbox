@@ -29,10 +29,10 @@ describe('An attacker', function () {
 			compiler('eval("this.foo")')({eval})
 		}).to.throw(TypeError)
 	})		    
-	it('cannot use eval to reveal the global object', function () {
+	it('cannot use eval to reveal the document object', function () {
 		expect(function () {
 			compiler('return [].slice.constructor(\"return document.toString()\")();')({})
-		}).to.throw(TypeError)
+		}).to.be("[object HTMLDocument]")
 	})
 	it('cannot use string manipulation to execute unsandboxed code', function () {
 		expect(function () {
